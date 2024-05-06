@@ -1,0 +1,2 @@
+your code should generate such output: {}
+but it cause those errors: {}

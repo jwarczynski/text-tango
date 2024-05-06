@@ -1,0 +1,11 @@
+Write a python code for generating rule from given output given reference output.
+Write just the fragment of  python code which will replace comment in provded below snippet and nothing else. Do no tinlcude code which I already wrote. Triplets is a list of tuples where each tuple is (x, relation, y)
+Instance:
+triplets: {}
+Output: {}
+
+your code shuld be included inside this template:
+if (relations == {}):
+     // your code to generate output
+    print(output)
+Wrap any code  in <code></code> tags

@@ -1,0 +1,6 @@
+# Ignore all files and folders except prompt_templates
+*
+!prompt_templates/
+!prompt_templates/**
+
+

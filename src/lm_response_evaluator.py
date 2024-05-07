@@ -1,11 +1,12 @@
 import difflib
+import re
 
 
 def get_response_similarity(response, reference_text):
     return difflib.SequenceMatcher(None, response, reference_text).ratio()
 
 
-def extract_code(response):
+def extract_code(response, relations):
     # check if <code> tag is present in the response
     if '<code>' not in response:
         #try to extract code from ```
@@ -20,14 +21,17 @@ def extract_code(response):
 
     # remove `print(output) from the code
     code = code.replace("print(output)", "")
+    code = remove_redundant_code(code, relations)
+
 
     return code
 
 
-def evaluate_response(triplets, code, reference_text):
+def evaluate_response(triplets, code, reference_text, relations):
     # Combine triplets, code, and reference text into a single Python script
     # remove indents from each line if the code in first line is indented
 
+    code = remove_redundant_code(code, relations)
     code = remove_indents(code)
 
     combined_script = f"""
@@ -54,6 +58,29 @@ result_dict['output'] = output
         # Handle exceptions
         output = result_dict.get('output', '')
         return output, str(e)
+
+
+def remove_redundant_code(code, relations):
+    ''' Example usage:
+    code = """
+    if relations == {'LIVES_IN', 'HAS'}:
+        print("This line should be removed")
+    print("This line should remain")
+    """
+    relations = {'LIVES_IN', 'HAS'}
+    new_code = remove_redundant_code(code, relations)
+    print(f'new_code:\n{new_code}')
+    '''
+
+    # Define the pattern to match
+    pattern = fr"^\s*if\s+\(?relations\s*==\s*.*{re.escape(str(relations))}\)?\s*:.?$"
+    # pattern = fr"^\s*if\s+\(?relations\s*==\s*.*:.?$"
+    regex = re.compile(pattern, re.MULTILINE)
+
+    # Remove the matching line from the code
+    new_code = regex.sub("", code)
+
+    return new_code
 
 
 def remove_indents(code):

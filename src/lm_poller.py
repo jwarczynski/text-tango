@@ -1,11 +1,15 @@
 import ollama
-
+from pathlib import Path
 
 class LMPoller:
-    def __init__(self):
+    def __init__(self, model_name='llama3:70b', prompt_templates_dir='../res/prompt_templates',
+                 responses_dir='../res/lm_responses'):
+        self.responses_dir = Path(responses_dir)
+        self.__prompt_templates_dir = prompt_templates_dir
         self.prompt_template = self.__get_prompt_template()
         self.errors_query_template = self.__get_errors_query_template()
         self.wrong_output_query_template = self.__get_wrong_output_query_template()
+        self.__model = model_name
 
         self.last_prompt = None
         self.last_response = None
@@ -34,7 +38,7 @@ class LMPoller:
         self.last_relation_set = relation_set
 
         self.last_prompt = self.prompt_template.format(triplets, reference_text, relation_set)
-        self.last_response = ollama.chat(model='llama3:70b', messages=[
+        self.last_response = ollama.chat(model=self.__model, messages=[
             {
                 'role': 'user',
                 'content': self.last_prompt,
@@ -52,7 +56,7 @@ class LMPoller:
                 self.last_reference_text, incorrect_output
             )
 
-        self.last_response = ollama.chat(model='llama3:70b', messages=[
+        self.last_response = ollama.chat(model=self.__model, messages=[
             {
                 'role': 'user',
                 'content': self.last_prompt,

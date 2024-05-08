@@ -23,7 +23,6 @@ def extract_code(response, relations):
     code = code.replace("print(output)", "")
     code = remove_redundant_code(code, relations)
 
-
     return code
 
 
@@ -44,8 +43,8 @@ output = ""
 # Return the output
 result_dict['output'] = output
 """
-    with open('../res/combined_scripts/combined_script.py', 'w') as f:
-        f.write(combined_script)
+    # with open('../res/combined_scripts/combined_script.py', 'w') as f:
+    #     f.write(combined_script)
 
     result_dict = {}
     try:
@@ -72,6 +71,9 @@ def remove_redundant_code(code, relations):
     print(f'new_code:\n{new_code}')
     '''
 
+    if code is None:
+        return None
+
     # Define the pattern to match
     pattern = fr"^\s*if\s+\(?relations\s*==\s*.*{re.escape(str(relations))}\)?\s*:.?$"
     # pattern = fr"^\s*if\s+\(?relations\s*==\s*.*:.?$"
@@ -84,6 +86,8 @@ def remove_redundant_code(code, relations):
 
 
 def remove_indents(code):
+    if code is None:
+        return None
     # Remove leading empty lines
     code_lines = code.split("\n")
     while code_lines and not code_lines[0].strip():

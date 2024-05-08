@@ -6,7 +6,7 @@ import time
 import pprint
 
 from dataset import WebNLGDataset
-from program import Program
+from program import ProgramWriter
 from lm_poller import LMPoller
 from train import train
 
@@ -19,7 +19,7 @@ def main():
                             samples_per_relation_set=args.samples_per_relation_set)
     logger.info(f'Loaded {len(dataset)} samples')
 
-    program = Program(output_dir=Path(args.output_dir), name=args.program_name)
+    program = ProgramWriter(output_dir=Path(args.output_dir), name=args.program_name)
     logger.info(f'Initialized program. Output directory: {args.output_dir}')
 
     responses_dir = Path(args.lm_responses_dir) / args.model / f'{time.strftime("%Y-%m-%d_%H-%M-%S")}'

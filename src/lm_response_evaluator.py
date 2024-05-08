@@ -1,7 +1,25 @@
 import difflib
 import re
+from program import NLGRule
 
+class SimpleNLGRule(NLGRule):
+    def prepare_exec_code(self, triplets):
+            
+        code = remove_redundant_code(self.rule_code, self.relation_set)
+        code = remove_indents(code)
 
+        combined_script = f"""
+# Triplets
+triplets = {triplets}
+# Initialize output variable
+output = ""
+# Code
+{code}
+# Return the output
+result_dict['output'] = output
+"""
+        return combined_script
+    
 def get_response_similarity(response, reference_text):
     return difflib.SequenceMatcher(None, response, reference_text).ratio()
 

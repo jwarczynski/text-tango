@@ -153,7 +153,8 @@ def evaluate_program(program, metrics):
         is_out_domain.append(dataEntry.category in ["Film","MusicalWork","Scientist"])
 
         relations = tuple(sorted([i.pred for i in dataEntry.data]))
-        output = program.process_input(relations, dataEntry.data)
+        input = [tuple([triplet.subj, triplet.pred, triplet.obj]) for triplet in dataEntry.data]
+        output = program.process_input(relations, input)
         
         refs_multi.append(dataEntry.refs)
         preds_multi.append(output)

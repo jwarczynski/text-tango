@@ -8,11 +8,11 @@ import time
 from text_preprocessing import extract_triplets
 from lm_response_evaluator import extract_code, evaluate_response, get_response_similarity
 from lm_poller import LMPoller
-from program import Program
+from program import ProgramWriter
 from dataset import WebNLGDataset
 
 
-def train(dataset: WebNLGDataset, program:Program, lm_poller: LMPoller, max_fix_query=3, log_directory='../logs', subset_size=3):
+def train(dataset: WebNLGDataset, program: ProgramWriter, lm_poller: LMPoller, max_fix_query=3, log_directory='../logs', subset_size=3):
     if subset_size is not None:
         dataset = dataset[:subset_size]
 

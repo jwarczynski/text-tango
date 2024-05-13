@@ -1,11 +1,12 @@
 NO_RULE_ERROR_CODE = -404
 
+
 class NLGRule:
     def __init__(self, relation_set, rule_code):
-            self.relation_set = relation_set
-            self.rule_code = rule_code
+        self.relation_set = relation_set
+        self.rule_code = rule_code
 
-    def prepare_exec_code(self,triplets):
+    def prepare_exec_code(self, triplets):
         pass
 
     def exec_rule(self, triplets):
@@ -22,12 +23,13 @@ class NLGRule:
             output = result_dict.get('output', '')
             return output, str(e)
 
+
 class Program:
     def __init__(self):
-        self.rules = {} 
+        self.rules = {}
 
     def add_rule(self, rule):
-        relationset_str = tuple(sorted(rule.relation_set)) 
+        relationset_str = tuple(sorted(rule.relation_set))
         if relationset_str in self.rules:
             print(f"WARN: Replacing an existing rule for {rule.relation_set}")
         self.rules[relationset_str] = rule
@@ -37,7 +39,7 @@ class Program:
         if relationset_str in self.rules:
             return self.rules[relationset_str].exec_rule(triplets)
         return NO_RULE_ERROR_CODE, f"No rule for a given combination {relations}"
-    
+
     def process_input(self, relations, triplets):
         out, err = self.exec(relations, triplets)
         if out == NO_RULE_ERROR_CODE:
@@ -50,7 +52,6 @@ class Program:
                 return "SPLIT NEEDED"
         return out
 
-    
     def get_known_relations(self):
         relations = []
         for rule in self.rules.values():
@@ -64,6 +65,7 @@ class Program:
             writer.add_rule(rule.rule_code)
         writer.add_print_stmt()
         writer.write_program()
+
 
 class ProgramWriter:
     def __init__(self, output_dir, name):

@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 
 RDFTriple = namedtuple("RDFTriple", ["subj", "pred", "obj"])
 
+
 class DataEntry:
     """
     An entry in the dataset
@@ -61,6 +62,7 @@ class WebNLG:
                 entry = DataEntry(data=triples, refs=refs, data_type="triples", category=example["category"])
                 self.data.append(entry)
 
+
 # METRICS ==============================
 
 class SingleReferenceMetric:
@@ -69,18 +71,20 @@ class SingleReferenceMetric:
 
     def eval(self, preds, refs, ref_lens, is_out_domain):
         pass
-    
+
     def compute(self, preds, refs, ref_lens, is_out_domain):
         results = self.eval(preds, refs, ref_lens, is_out_domain)
 
         i = 0
         merged_results = []
         for len_r in ref_lens:
-            merged_results.append(results[i:i+len_r].mean())
+            merged_results.append(results[i:i + len_r].mean())
             i += len_r
 
         results = np.array(merged_results)
-        print(f"{self.name}: {results.mean()} +- {results.std()}; OOD: {results[is_out_domain].mean()}; InD: {results[~is_out_domain].mean()}")
+        print(
+            f"{self.name}: {results.mean()} +- {results.std()}; OOD: {results[is_out_domain].mean()}; InD: {results[~is_out_domain].mean()}")
+
 
 class MultiReferenceMetric:
     def __init__(self) -> None:
@@ -88,10 +92,11 @@ class MultiReferenceMetric:
 
     def eval(self, preds, refs, ref_lens, is_out_domain):
         pass
-    
+
     def compute(self, preds, refs, ref_lens, is_out_domain):
         results = self.eval(preds, refs, ref_lens, is_out_domain)
         print(f"{self.name}: {results} ")
+
 
 class BLEURT(SingleReferenceMetric):
     def __init__(self) -> None:
@@ -102,7 +107,8 @@ class BLEURT(SingleReferenceMetric):
     def eval(self, preds, refs, ref_lens, is_out_domain):
         results = self.metric.compute(predictions=preds, references=refs)
         return np.array(results["scores"])
-    
+
+
 class BERTScore(SingleReferenceMetric):
     def __init__(self) -> None:
         super().__init__()
@@ -113,6 +119,7 @@ class BERTScore(SingleReferenceMetric):
         results = self.metric.compute(predictions=preds, references=refs, lang="en")
         return np.array(results["f1"])
 
+
 class BLEU(MultiReferenceMetric):
     def __init__(self) -> None:
         super().__init__()
@@ -122,7 +129,8 @@ class BLEU(MultiReferenceMetric):
     def eval(self, preds, refs, ref_lens, is_out_domain):
         results = self.metric.compute(predictions=preds, references=refs)
         return np.array(results["bleu"])
-    
+
+
 class METEOR(MultiReferenceMetric):
     def __init__(self) -> None:
         super().__init__()
@@ -139,6 +147,7 @@ class METEOR(MultiReferenceMetric):
 def get_basic_metrics():
     return [METEOR(), BLEU()]
 
+
 def evaluate_program(program, metrics):
     data = WebNLG()
     data.load(['test'])
@@ -148,14 +157,14 @@ def evaluate_program(program, metrics):
     refs_multi = []
     preds_multi = []
     ref_lens = []
-    is_out_domain=[]
+    is_out_domain = []
     for dataEntry in data.data:
-        is_out_domain.append(dataEntry.category in ["Film","MusicalWork","Scientist"])
+        is_out_domain.append(dataEntry.category in ["Film", "MusicalWork", "Scientist"])
 
         relations = tuple(sorted([i.pred for i in dataEntry.data]))
         input = [tuple([triplet.subj, triplet.pred, triplet.obj]) for triplet in dataEntry.data]
         output = program.process_input(relations, input)
-        
+
         refs_multi.append(dataEntry.refs)
         preds_multi.append(output)
         for reference_text in dataEntry.refs:
@@ -169,6 +178,3 @@ def evaluate_program(program, metrics):
             metric.compute(preds_multi, refs_multi, ref_lens, is_out_domain)
         else:
             metric.compute(preds_single, refs_single, ref_lens, is_out_domain)
-
-
-

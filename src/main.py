@@ -1,19 +1,19 @@
 from argparse import ArgumentParser
-import os
 from pathlib import Path
-import logging
 import time
+import os
 import pprint
 
 from dataset import WebNLGDataset
 from program import ProgramWriter
 from lm_poller import LMPoller
 from train import train
+from utils import get_logger
 
 
 def main():
     args = parse_args()
-    logger = get_logger(args.log_dir)
+    logger = get_logger(args.log_dir, 'webnlg', stream=True)
 
     dataset = WebNLGDataset(data_dir=args.dataset_dir, split=args.split,
                             samples_per_relation_set=args.samples_per_relation_set)
@@ -60,27 +60,8 @@ def add_training_arguments(parser):
     training_group = parser.add_argument_group('Training')
     training_group.add_argument("--samples-per-relation-set", "-spr", default=1, type=int, help="number of samples per relation set")
     training_group.add_argument("--split", "-s", default='train', type=str, help="dataset split")
-    training_group.add_argument("--model", "-m", default='lama3:70b', type=str, help="language model")
+    training_group.add_argument("--model", "-m", default='llama3:70b', type=str, help="language model")
     training_group.add_argument("--max-lm-fix-queries", "-mlfq", default=3, type=int, help="maximum number of language model fix queries")
-
-
-def get_logger(log_dir):
-    if not os.path.exists(log_dir):
-        os.makedirs(log_dir)
-
-    logger = logging.getLogger(__name__)
-    logger.setLevel(logging.INFO)
-    formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
-    logger.handlers = [
-        logging.FileHandler(log_dir / f"webnlg_{time.strftime('%Y-%m-%d_%H-%M-%S')}.log"),
-        logging.StreamHandler()
-    ]
-
-    for handler in logger.handlers:
-        handler.setFormatter(formatter)
-
-    logger.info(f'Logger initialized. Log directory: {log_dir}')
-    return logger
 
 
 if __name__ == '__main__':

@@ -17,7 +17,7 @@ class DataEntry:
     An entry in the dataset
     """
 
-    def __init__(self, data, refs, data_type, align=None, num_ref_sentences=None, category=None, dialhist=None):
+    def __init__(self, data, refs, data_type, entry_id, align=None, num_ref_sentences=None, category=None, dialhist=None):
         self.data = data
         self.refs = refs
         self.data_type = data_type
@@ -25,6 +25,7 @@ class DataEntry:
         self.num_ref_sentences = num_ref_sentences
         self.category = category
         self.dialhist = dialhist
+        self.entry_id = entry_id.replace("/", "_")
 
     def __repr__(self):
         return str(self.__dict__)
@@ -59,7 +60,10 @@ class WebNLG:
                 else:
                     refs = [example["target"]]
 
-                entry = DataEntry(data=triples, refs=refs, data_type="triples", category=example["category"])
+                entry = DataEntry(
+                    data=triples, refs=refs, data_type="triples",
+                    entry_id=example['webnlg_id'], category=example["category"]
+                )
                 self.data.append(entry)
 
 

@@ -2,14 +2,17 @@ import difflib
 import re
 from program import NLGRule
 
+
 class SimpleNLGRule(NLGRule):
     def prepare_exec_code(self, triplets):
-            
         code = remove_redundant_code(self.rule_code, self.relation_set)
         code = remove_indents(code)
 
         combined_script = f"""
 # Triplets
+from collections import namedtuple
+RDFTriple = namedtuple("RDFTriple", ["subj", "pred", "obj"])
+relations = set([triplet.pred for triplet in triplets])
 triplets = {triplets}
 # Initialize output variable
 output = ""
@@ -19,7 +22,8 @@ output = ""
 result_dict['output'] = output
 """
         return combined_script
-    
+
+
 def get_response_similarity(response, reference_text):
     return difflib.SequenceMatcher(None, response, reference_text).ratio()
 
@@ -92,6 +96,8 @@ def remove_redundant_code(code, relations):
     if code is None:
         return None
 
+    if not isinstance(relations, set):
+        relations = set([triple[1] for triple in relations])
     # Define the pattern to match
     pattern = fr"^\s*if\s+\(?relations\s*==\s*.*{re.escape(str(relations))}\)?\s*:.?$"
     # pattern = fr"^\s*if\s+\(?relations\s*==\s*.*:.?$"

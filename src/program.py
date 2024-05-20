@@ -52,6 +52,10 @@ class Program:
                 return "SPLIT NEEDED"
         return out
 
+    def has_rule(self, relations):
+        relationset_str = tuple(sorted(relations))
+        return relationset_str in self.rules
+
     def get_known_relations(self):
         relations = []
         for rule in self.rules.values():
@@ -61,8 +65,7 @@ class Program:
     def write_program(self, output_dir, name):
         writer = ProgramWriter(output_dir, name)
         for rule in self.rules.values():
-            writer.add_rule_if_stmt(rule.relation_set)
-            writer.add_rule(rule.rule_code)
+            writer.add_rule(rule.relation_set, rule.rule_code)
         writer.add_print_stmt()
         writer.write_program()
 
@@ -93,7 +96,7 @@ class ProgramWriter:
 
     def adjust_indentation(self, rule, indent_level):
         # Split the rule string into lines
-        rule_lines = rule.__split("\n")
+        rule_lines = rule.split("\n")
 
         existing_indentation = 0
         # Find the first non-empty line and determine its indentation

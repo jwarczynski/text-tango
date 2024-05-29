@@ -11,12 +11,13 @@ logger = logging.getLogger(__name__)
 
 RDFTriple = namedtuple("RDFTriple", ["subj", "pred", "obj"])
 
+
 class DataEntry:
     """
     An entry in the dataset
     """
 
-    def __init__(self, data, refs, data_type, align=None, num_ref_sentences=None, category=None, dialhist=None):
+    def __init__(self, data, refs, data_type, entry_id, align=None, num_ref_sentences=None, category=None, dialhist=None):
         self.data = data
         self.refs = refs
         self.data_type = data_type
@@ -24,6 +25,7 @@ class DataEntry:
         self.num_ref_sentences = num_ref_sentences
         self.category = category
         self.dialhist = dialhist
+        self.entry_id = entry_id.replace("/", "_")
 
     def __repr__(self):
         return str(self.__dict__)
@@ -58,8 +60,12 @@ class WebNLG:
                 else:
                     refs = [example["target"]]
 
-                entry = DataEntry(data=triples, refs=refs, data_type="triples", category=example["category"])
+                entry = DataEntry(
+                    data=triples, refs=refs, data_type="triples",
+                    entry_id=example['webnlg_id'], category=example["category"]
+                )
                 self.data.append(entry)
+
 
 # METRICS ==============================
 
@@ -69,18 +75,20 @@ class SingleReferenceMetric:
 
     def eval(self, preds, refs, ref_lens, is_out_domain):
         pass
-    
+
     def compute(self, preds, refs, ref_lens, is_out_domain):
         results = self.eval(preds, refs, ref_lens, is_out_domain)
 
         i = 0
         merged_results = []
         for len_r in ref_lens:
-            merged_results.append(results[i:i+len_r].mean())
+            merged_results.append(results[i:i + len_r].mean())
             i += len_r
 
         results = np.array(merged_results)
-        print(f"{self.name}: {results.mean()} +- {results.std()}; OOD: {results[is_out_domain].mean()}; InD: {results[~is_out_domain].mean()}")
+        print(
+            f"{self.name}: {results.mean()} +- {results.std()}; OOD: {results[is_out_domain].mean()}; InD: {results[~is_out_domain].mean()}")
+
 
 class MultiReferenceMetric:
     def __init__(self) -> None:
@@ -88,10 +96,11 @@ class MultiReferenceMetric:
 
     def eval(self, preds, refs, ref_lens, is_out_domain):
         pass
-    
+
     def compute(self, preds, refs, ref_lens, is_out_domain):
         results = self.eval(preds, refs, ref_lens, is_out_domain)
         print(f"{self.name}: {results} ")
+
 
 class BLEURT(SingleReferenceMetric):
     def __init__(self) -> None:
@@ -102,7 +111,8 @@ class BLEURT(SingleReferenceMetric):
     def eval(self, preds, refs, ref_lens, is_out_domain):
         results = self.metric.compute(predictions=preds, references=refs)
         return np.array(results["scores"])
-    
+
+
 class BERTScore(SingleReferenceMetric):
     def __init__(self) -> None:
         super().__init__()
@@ -113,6 +123,7 @@ class BERTScore(SingleReferenceMetric):
         results = self.metric.compute(predictions=preds, references=refs, lang="en")
         return np.array(results["f1"])
 
+
 class BLEU(MultiReferenceMetric):
     def __init__(self) -> None:
         super().__init__()
@@ -120,8 +131,7 @@ class BLEU(MultiReferenceMetric):
         self.name = "BLEU"
 
     def eval(self, preds, refs, ref_lens, is_out_domain):
-        results = self.metric.compute(predictions=preds, references=refs)
-        results_in = self.metric.compute(predictions=[p for i,p in enumerate(preds) if not is_out_domain[i]], references=[r for i,r in enumerate(refs) if not is_out_domain[i]])
+        results = self.metric.compute(predictions=preds, references=refs)        results_in = self.metric.compute(predictions=[p for i,p in enumerate(preds) if not is_out_domain[i]], references=[r for i,r in enumerate(refs) if not is_out_domain[i]])
         good = [(i,j) for i,j in zip(preds,refs) if i not in ("SPLIT NEEDED", "OUT OF DOMAIN")]
         results_good = self.metric.compute(predictions=[i for i,j in good], references=[j for i,j in good])
         return np.array(results["bleu"]), np.array(results_in["bleu"]), np.array(results_good["bleu"])
@@ -144,6 +154,7 @@ class METEOR(MultiReferenceMetric):
 def get_basic_metrics():
     return [METEOR(), BLEU()]
 
+
 def evaluate_program(program, metrics):
     data = WebNLG()
     data.load(['test'])
@@ -153,15 +164,16 @@ def evaluate_program(program, metrics):
     refs_multi = []
     preds_multi = []
     ref_lens = []
-    is_out_domain=[]
+    is_out_domain = []
     for dataEntry in data.data:
-        is_out_domain.append(dataEntry.category in ["Film","MusicalWork","Scientist"])
+        is_out_domain.append(dataEntry.category in ["Film", "MusicalWork", "Scientist"])
 
         relations = tuple(sorted([i.pred for i in dataEntry.data]))
         input = [tuple([triplet.subj, triplet.pred, triplet.obj]) for triplet in dataEntry.data]
         output = program.process_input(relations, input)
         if output == "OUT OF DOMAIN":
             is_out_domain[-1] = True
+
         refs_multi.append(dataEntry.refs)
         preds_multi.append(output)
         for reference_text in dataEntry.refs:

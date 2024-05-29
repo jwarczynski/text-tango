@@ -76,3 +76,44 @@ class SimpleProgramTrainer(ProgramTrainer):
             else:
                 logger.error(f'Failed to generate rule for {key} after {self.MAX_LLM_FIX_QUYERY} attempts. Skipping...')
                 
+
+
+#Copied from older JW's implementation
+class SimpleProgramLoader(ProgramTrainer):
+
+    def __init__(self):
+        super().__init__()
+        self.MAX_LLM_FIX_QUYERY = 1
+
+    def train(self, data_dict):
+        for i, key in enumerate(data_dict):
+            if i > 2938:
+                break
+            relations = set(key)
+            #get sample for the key
+            sample = data_dict[key][0]
+            sample_X = sample['in']
+            reference_text = sample['out']
+            triplets = extract_triplets(sample_X)
+            
+            with open(f'../res/lama_responses/code_{i}.py', 'r') as f:
+                exctracted_code = f.read()
+            rule = SimpleNLGRule(relations, exctracted_code)
+
+            output, errors = rule.exec_rule(triplets) #evaluate_response(triplets ,exctracted_code, reference_text, relations)
+            print(f'Errors: {errors}')
+            fix_query_count = 0
+            print(f'similarity: {get_response_similarity(output, reference_text)}')
+            print(f'output: {output}\nreference: {reference_text}\n\n')
+            while (errors is not None or get_response_similarity(output, reference_text) < 0.5) and fix_query_count < self.MAX_LLM_FIX_QUYERY:
+                # response = self.lm.fix_query(output, errors)
+                # exctracted_code = extract_code(response, relations)
+                # rule = SimpleNLGRule(relations, exctracted_code)
+                # output, errors = rule.exec_rule(triplets) # evaluate_response(triplets, exctracted_code, reference_text)
+                fix_query_count += 1
+                
+            if fix_query_count < self.MAX_LLM_FIX_QUYERY:
+                self.program.add_rule(rule)
+            else:
+                logger.error(f'Failed to generate rule for {key} after {self.MAX_LLM_FIX_QUYERY} attempts. Skipping...')
+                

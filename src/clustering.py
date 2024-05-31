@@ -140,6 +140,8 @@ def parse_args():
     parser.add_argument("--cluster-size-threshold", "-cst", default=3, type=int, help="cluster size threshold")
     parser.add_argument("--split", "-s", default='train', type=str, help="dataset split")
 
+    parser.add_argument("--test-set", "-t", default=False, action="store_true")
+
     return parser.parse_args()
 
 
@@ -199,6 +201,24 @@ if __name__ == '__main__':
     logger.info(f'Number of samples to generate: {len(samples_to_generate):,}')
     logger.info(
         f'Number of samples not nedded to be generated: {len(augmented_training_relations) - len(samples_to_generate)}')
+
+    if args.test_set:
+        webnlg = WebNLG()
+        webnlg.load(["test"])
+        test_set = [tuple(sorted(set([triple.pred for triple in x.data]))) for x in webnlg.data]
+        test_set = [ set (i) for i in set(test_set)]
+        logger.info(f"All combinations in test set {len(test_set)}")
+
+        for p in predicate_sets:
+            if p in test_set:
+                test_set.remove(p)
+        logger.info(f"Unknown combinations in test set {len(test_set)}")
+
+        unfiltered_samples_to_generate = samples_to_generate
+        samples_to_generate = [p for p in unfiltered_samples_to_generate if p in test_set or
+                                any(p.issubset(t) for t in test_set) ]
+        logger.info(f"Unknown combinations covered by generated set {len([p for p in unfiltered_samples_to_generate if p in test_set] )}")
+        logger.info(f"Number of samples to generate for test_set {len(samples_to_generate)}")
 
     logger.info(f'Saving samples to generate to {args.output_file}')
     with open(args.output_file, 'w', encoding='utf-8') as f:

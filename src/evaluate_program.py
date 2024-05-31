@@ -131,10 +131,11 @@ class BLEU(MultiReferenceMetric):
         self.name = "BLEU"
 
     def eval(self, preds, refs, ref_lens, is_out_domain):
-        results = self.metric.compute(predictions=preds, references=refs)        results_in = self.metric.compute(predictions=[p for i,p in enumerate(preds) if not is_out_domain[i]], references=[r for i,r in enumerate(refs) if not is_out_domain[i]])
+        results = self.metric.compute(predictions=preds, references=refs)        
+        results_in = self.metric.compute(predictions=[p for i,p in enumerate(preds) if not is_out_domain[i]], references=[r for i,r in enumerate(refs) if not is_out_domain[i]])
         good = [(i,j) for i,j in zip(preds,refs) if i not in ("SPLIT NEEDED", "OUT OF DOMAIN")]
         results_good = self.metric.compute(predictions=[i for i,j in good], references=[j for i,j in good])
-        return np.array(results["bleu"]), np.array(results_in["bleu"]), np.array(results_good["bleu"])
+        return np.array(results["bleu"]), np.array(results_in["bleu"]), np.array(results_good["bleu"]), len(good)/sum(is_out_domain)
     
 class METEOR(MultiReferenceMetric):
     def __init__(self) -> None:
@@ -169,8 +170,8 @@ def evaluate_program(program, metrics):
         is_out_domain.append(dataEntry.category in ["Film", "MusicalWork", "Scientist"])
 
         relations = tuple(sorted([i.pred for i in dataEntry.data]))
-        input = [tuple([triplet.subj, triplet.pred, triplet.obj]) for triplet in dataEntry.data]
-        output = program.process_input(relations, input)
+        # input = [tuple([triplet.subj, triplet.pred, triplet.obj]) for triplet in dataEntry.data]
+        output = program.process_input(relations, dataEntry.data)
         if output == "OUT OF DOMAIN":
             is_out_domain[-1] = True
 

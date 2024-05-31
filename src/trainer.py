@@ -1,8 +1,10 @@
 import os.path
 import time
+import dill
 from collections import namedtuple
-from pathlib import Path
+from pathlib import Path    
 from typing import List
+from tqdm import tqdm
 
 import ollama
 
@@ -191,11 +193,23 @@ class SimpleProgramTrainer(ProgramTrainer):
         self._judge = judge
         self.max_fix_prompts = max_fix_prompts
 
-    def train(self, dataset):
-        for sample in dataset:
+    def train(self, dataset, checkpoint_file):
+        curr_iteration = -1
+        if os.path.isfile(checkpoint_file):
+            with open(checkpoint_file, 'rb') as f:
+                self.program = dill.load( f)
+                curr_iteration = dill.load(f)
+        for i, sample in tqdm(enumerate(dataset), total=len(dataset)):
+            if i < curr_iteration:
+                continue
             predicates = set([triplet.pred for triplet in sample.data])
             if not self.program.has_rule(predicates):
                 self.construct_rule(sample.data, sample.refs[0], sample.entry_id)
+            if i % 100 == 0:
+                with open(checkpoint_file, 'wb') as f:
+                    dill.dump(self.program, f)
+                    dill.dump(i, f)
+                    
 
     def construct_rule(self, triplets: List[RDFTriple], reference: str, sample_id: str):
         def execute_rule(triplets, code):
@@ -210,9 +224,15 @@ class SimpleProgramTrainer(ProgramTrainer):
 
         code = self.prompter.ask_for_code(triplets, reference)
         rule_result, is_rule_ok = execute_rule(triplets, code)
+        # print("====")
+        # print(f"{is_rule_ok}\n{triplets}\n{reference}\n{rule_result}\n-----\n{code}\n")
+        # print("====")
 
         while not is_rule_ok and fix_query_count < self.max_fix_prompts:
-            code = self.prompter.fix_code(reference, triplets, rule_result)
+            if fix_query_count % 2 == 1:
+                code = self.prompter.ask_for_code(triplets, reference)
+            else:
+                code = self.prompter.fix_code(reference, triplets, rule_result)
             rule_result, is_rule_ok = execute_rule(triplets, code)
             fix_query_count += 1
 
@@ -227,11 +247,11 @@ class SimpleProgramTrainer(ProgramTrainer):
 
 if __name__ == '__main__':
     script_path = os.path.dirname(os.path.realpath(__file__))
-    lm_raw_responses_dir = Path(script_path) / '..' / 'out' / 'train' / 'lm_raw_responses'
-    lm_code_responses_dir = Path(script_path) / '..' / 'out' / 'train' / 'lm_code_responses'
-    first_query_template_path = Path(script_path) / '..' / 'res' / 'prompt_templates' / 'template1.txt'
-    fix_query_template_path = Path(script_path) / '..' / 'res' / 'prompt_templates' / 'wrong_output_template.txt'
-    output_program_dir = Path(script_path) / '..' / 'out' / 'train'
+    lm_raw_responses_dir = Path(script_path) / '..' / 'out2' / 'train' / 'lm_raw_responses'
+    lm_code_responses_dir = Path(script_path) / '..' / 'out2' / 'train' / 'lm_code_responses'
+    first_query_template_path = Path(script_path) / '..' / 'res' / 'prompt_templates' / 'template2.txt'
+    fix_query_template_path = Path(script_path) / '..' / 'res' / 'prompt_templates' / 'wrong_output_template2.txt'
+    output_program_dir = Path(script_path) / '..' / 'out2' / 'train'
     output_program_name = 'rule_program'
 
     with open(first_query_template_path, 'r') as f:
@@ -241,12 +261,15 @@ if __name__ == '__main__':
 
     templates = TemplateTuple(first_query=first_query_template, fix_query=fix_query_template)
     lm_response_writer = LMResponseWriter(lm_raw_responses_dir, lm_code_responses_dir, create_dirs=True)
-    lm = LanguageModel()
+    lm = LanguageModel(model_name="llama3")
     prompter = Prompter(lm, templates, lm_response_writer)
     judge = RuleJudge()
 
-    trainer = SimpleProgramTrainer(lm, templates, lm_response_writer, prompter, judge, 2)
+    trainer = SimpleProgramTrainer(lm, templates, lm_response_writer, prompter, judge, 6)
     dataset = WebNLG()
     dataset.load(['train'])
-    trainer.train(dataset.data)
+    trainer.train(dataset.data, "fast_train.pkl")
     trainer.program.write_program(output_program_dir, output_program_name)
+
+    with open('saved_trainer2.pkl', 'wb') as f:
+        dill.dump(trainer, f)

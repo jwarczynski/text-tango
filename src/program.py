@@ -1,3 +1,4 @@
+from text_preprocessing import normalize
 NO_RULE_ERROR_CODE = -404
 
 
@@ -24,6 +25,35 @@ class NLGRule:
             return output, str(e)
 
 
+class TemplateRule(NLGRule):
+    def __init__(self, relation_set, rule_code):
+        self.relation_set = relation_set
+        self.template = rule_code
+
+    def prepare_exec_code(self, triplets):
+        pass
+
+    def fill_template(self,triple):
+        """
+        Fills a template with the data from the triple
+        """
+        for item, placeholder in [
+            (triple.subj, "<subject>"), 
+            (triple.pred, "<predicate>"), 
+            (triple.obj, "<object>")
+        ]:
+            template = self.template.replace(placeholder, normalize(item, 
+                    remove_quotes=True, 
+                    remove_parentheses=True))
+        return template
+    
+    def exec_rule(self, triplets):
+        if len(triplets)> 1 :
+            print(f"ERROR: Template rule used for more triples than 1 ({self.relation_set}), {triplets}")
+        out = [self.fill_template(triplet) for triplet in triplets ]
+        return " ".join(out), None
+
+
 class Program:
     def __init__(self):
         self.rules = {}
@@ -48,10 +78,31 @@ class Program:
             if not is_in_domain:
                 return "OUT OF DOMAIN"
             else:
-                #spliting the input into several parts
-                return "SPLIT NEEDED"
+                result = []
+                for rel, trip in self._make_split(relations, triplets):
+                    result.append(self.process_input(rel,trip))
+                return " ".join(result)
         return out
 
+    def _make_split(self, relations, triplets):
+        relations_set = set(relations)
+        if len(relations_set) != len(relations):
+            print(f"ERROR: {triplets}")
+        available_rules = [set(r) for r in self.rules]
+        result = [] 
+        while len(relations_set) != 0:
+            available_rules = [r for r in available_rules if r.issubset(relations_set)]
+            if len(available_rules) == 0:
+                print(f"{relations_set}: {available_rules}")
+                break
+            best_rule = max(available_rules, key=len)
+            best_triplets = [t for t in triplets if t.pred in best_rule]
+            result.append((best_rule,best_triplets))
+            relations_set = relations_set - best_rule
+        return result
+
+
+        
     def has_rule(self, relations):
         relationset_str = tuple(sorted(relations))
         return relationset_str in self.rules
@@ -69,6 +120,17 @@ class Program:
         writer.add_print_stmt()
         writer.write_program()
 
+    def add_json_templates(self, templates_filename):
+
+        import json
+        with open(templates_filename) as f:
+            templates = json.load(f)
+        for relation in templates:
+            relationName = normalize(relation)
+            relationset_str = tuple(sorted([relationName]))
+            if relationset_str not in self.rules:
+                rule = TemplateRule(set([relationName]), templates[relation][0])
+                self.add_rule(rule)
 
 class ProgramWriter:
     def __init__(self, output_dir, name):

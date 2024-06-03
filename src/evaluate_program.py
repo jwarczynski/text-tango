@@ -67,6 +67,63 @@ class WebNLG:
                 self.data.append(entry)
 
 
+class AugmentedDataset:
+    def __init__(self, *args, **kwargs):
+        self.data = []
+
+    def load(self, path):
+        def get_known_relations():
+            from evaluate_program import WebNLG
+            data = WebNLG()
+            data.load(['test', "train"])
+
+            triplets = [dataEntry.data for dataEntry in data.data]
+            triplets = [t.pred  for sets in triplets for t in sets]
+            known_relations = set(triplets)
+            return known_relations
+        
+        def convert2triple(input, known_relations):
+            input = [i.strip() for i in input]
+            rel = [i for i,j in enumerate(input) if j in known_relations]
+            if len(rel) != 1:
+                print("ERROR!")
+                print(input)
+                print(rel)
+                return None
+            i = rel[0]
+            return [", ".join(input[:i]), input[i], ", ".join(input[i+1:])]
+            
+        import json
+        # load the dataset from HF datasets
+        with open(path, "r") as f:
+            data = json.load(f)
+
+        known_relations = get_known_relations()
+        for id, example in  enumerate(data["not_augmented_samples"]):
+            triples = example["in"]
+            # print(triples)
+            import re
+            triples = re.findall(r'\(.*?\)', triples)
+            triples = [i[1:-1] for i in triples]
+            # print(triples)
+            triples = [convert2triple(t.split(","), known_relations) for t in triples]
+            if any([t is None for t in triples]):
+                print(triples)
+                print("SKIP")
+                continue
+            # print(triples)
+            triples = [(normalize(x, remove_parentheses=False) for x in t) for t in triples]
+            
+            triples = [RDFTriple(*t) for t in triples]
+
+            entry = DataEntry(
+                data=triples, refs=[example["out"]], data_type="triples",
+                entry_id=str(id), category="augmented"
+            )
+            self.data.append(entry)
+
+
+
 # METRICS ==============================
 
 class SingleReferenceMetric:

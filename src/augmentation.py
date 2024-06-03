@@ -215,7 +215,7 @@ class Augmentation:
             f'Responses handler: {responses_handler.__class__.__name__}'
         )
 
-    def __get_promt(self, relation):
+    def __get_prompt(self, relation):
         relation_set = set(relation)
         prompt = self.prompt_template
         examples,_ = self.example_finder.find_set_of_examples(relation_set)
@@ -229,7 +229,7 @@ class Augmentation:
                 prompt += self.default_example
             for ex in examples:
                 rel = ", ".join([i.pred for i in ex.data])
-                input = ", ".join([f"({i.subj}, {i.pred}, {i.obj})" for i in ex.data])
+                input = ", ".join([f"({i.subj} | {i.pred} | {i.obj})" for i in ex.data])
                 prompt += self.prompt_example.format(relations= rel, input= input, out=ex.refs[0])
 
         triples,_ = self.example_finder.find_set_of_triples(relation_set)
@@ -253,7 +253,7 @@ class Augmentation:
                 self.not_augmented = []
 
     def __generate_sample(self, relation):
-        prompt = self.__get_promt(relation)
+        prompt = self.__get_prompt(relation)
         self.__tries = 0
         is_valid = False
         while not is_valid and self.__tries < 10:

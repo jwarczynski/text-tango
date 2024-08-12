@@ -83,6 +83,8 @@ class AugmentedDataset:
             return known_relations
         
         def convert2triple(input, known_relations):
+            if len(input) == 1:
+                input = input[0].split(",")
             input = [i.strip() for i in input]
             rel = [i for i,j in enumerate(input) if j in known_relations]
             if len(rel) != 1:
@@ -101,15 +103,15 @@ class AugmentedDataset:
         known_relations = get_known_relations()
         for id, example in  enumerate(data["not_augmented_samples"]):
             triples = example["in"]
-            # print(triples)
+            # print(id)
             import re
             triples = re.findall(r'\(.*?\)', triples)
             triples = [i[1:-1] for i in triples]
             # print(triples)
-            triples = [convert2triple(t.split(","), known_relations) for t in triples]
+            triples = [convert2triple(t.split("|"), known_relations) for t in triples]
             if any([t is None for t in triples]):
                 print(triples)
-                print("SKIP")
+                print(f"SKIP {id}")
                 continue
             # print(triples)
             triples = [(normalize(x, remove_parentheses=False) for x in t) for t in triples]
@@ -167,6 +169,7 @@ class BLEURT(SingleReferenceMetric):
 
     def eval(self, preds, refs, ref_lens, is_out_domain):
         results = self.metric.compute(predictions=preds, references=refs)
+        # results_in = self.metric.compute(predictions=[p for i,p in enumerate(preds) if not is_out_domain[i]], references=[r for i,r in enumerate(refs) if not is_out_domain[i]])
         return np.array(results["scores"])
 
 
@@ -178,6 +181,7 @@ class BERTScore(SingleReferenceMetric):
 
     def eval(self, preds, refs, ref_lens, is_out_domain):
         results = self.metric.compute(predictions=preds, references=refs, lang="en")
+        # results_in = self.metric.compute(predictions=[p for i,p in enumerate(preds) if not is_out_domain[i]], references=[r for i,r in enumerate(refs) if not is_out_domain[i]], lang="en")
         return np.array(results["f1"])
 
 
@@ -212,6 +216,7 @@ class METEOR(MultiReferenceMetric):
 def get_basic_metrics():
     return [METEOR(), BLEU()]
 
+from tqdm import tqdm
 
 def evaluate_program(program, metrics):
     data = WebNLG()
@@ -223,7 +228,7 @@ def evaluate_program(program, metrics):
     preds_multi = []
     ref_lens = []
     is_out_domain = []
-    for dataEntry in data.data:
+    for dataEntry in tqdm(data.data):
         is_out_domain.append(dataEntry.category in ["Film", "MusicalWork", "Scientist"])
 
         relations = tuple(sorted([i.pred for i in dataEntry.data]))

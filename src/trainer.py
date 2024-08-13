@@ -245,7 +245,6 @@ class Prompter:
     def ask_for_code(self, triplets, reference) -> str:
         predicates = [triplet.pred for triplet in triplets]
         prompt = self.templates.first_query.format(triplets=triplets, output=reference, relations=predicates)
-        # print(f"PROMPT\n{prompt}\n-\n")
         return self._query_extract_save(prompt, triplets, reference, temperature=0, seed=None)
 
     def _query_extract_save(self, prompt, triplets, reference, temperature=0.7, seed=None):
@@ -342,7 +341,7 @@ class SimpleProgramTrainer(ProgramTrainer):
 
         code = self.prompter.ask_for_code(triplets, reference)
         rule_result, is_rule_ok = execute_rule(triplets, code)
-        # print("====")
+        # print("==== New rule")
         # print(f"{is_rule_ok}\n{triplets}\n{reference}\n{rule_result}\n-----\n{code}\n")
         # print("====")
 
@@ -354,7 +353,7 @@ class SimpleProgramTrainer(ProgramTrainer):
             else:
                 code = self.prompter.fix_code(reference, triplets, rule_result)
             rule_result, is_rule_ok = execute_rule(triplets, code)
-            # print("====EEE")
+            # print("==== Error correction")
             # print(f"{is_rule_ok}\n{reference}\n{rule_result}\n-----\n{code}\n")
             # print("====")
             fix_query_count += 1
@@ -412,8 +411,8 @@ if __name__ == '__main__':
     if args.augment:
         from evaluate_program import AugmentedDataset  
         dataset = AugmentedDataset()
-        dataset.load("/home/lango/personal_work_troja/text-tango/archive/20240531-172133_checkpoint.json")
-        #dataset.load("/home/lango/personal_work_troja/text-tango/archive/20240603-110504_checkpoint.json")
+        dataset.load("path.json")
+        
     trainer.train(dataset.data, args.out_file)
     print("====")
     print(lm.count)

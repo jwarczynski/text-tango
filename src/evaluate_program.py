@@ -117,7 +117,9 @@ class AugmentedDataset:
             triples = [(normalize(x, remove_parentheses=False) for x in t) for t in triples]
             
             triples = [RDFTriple(*t) for t in triples]
-
+            if "out" not in example:
+                print(f"WARN: Incomplete example {example}")
+                continue
             entry = DataEntry(
                 data=triples, refs=[example["out"]], data_type="triples",
                 entry_id=str(id), category="augmented"

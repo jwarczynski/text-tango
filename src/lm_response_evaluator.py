@@ -5,14 +5,14 @@ from program import NLGRule
 
 class SimpleNLGRule(NLGRule):
     def prepare_exec_code(self, triplets):
-        code = remove_redundant_code(self.rule_code, self.relation_set)
+        code = remove_redundant_code(self.rule_code, self.relation_list)
         code = remove_indents(code)
 
         combined_script = f"""
 # Triplets
 from collections import namedtuple
 RDFTriple = namedtuple("RDFTriple", ["subj", "pred", "obj"])
-relations = set([triplet.pred for triplet in triplets])
+relations = [triplet.pred for triplet in triplets]
 triplets = {triplets}
 # Initialize output variable
 output = ""
@@ -82,6 +82,12 @@ result_dict['output'] = output
 
 
 def remove_redundant_code(code, relations):
+    def eliminate_re(pattern, code):
+        regex = re.compile(pattern, re.MULTILINE)
+
+        # Remove the matching line from the code
+        return regex.sub("", code)
+
     ''' Example usage:
     code = """
     if relations == {'LIVES_IN', 'HAS'}:
@@ -97,14 +103,16 @@ def remove_redundant_code(code, relations):
         return None
 
     if not isinstance(relations, set):
-        relations = set([triple[1] for triple in relations])
+        relations = set(relations) #set([triple[1] for triple in relations])
     # Define the pattern to match
     pattern = fr"^\s*if\s+\(?relations\s*==\s*.*{re.escape(str(relations))}\)?\s*:.?$"
     # pattern = fr"^\s*if\s+\(?relations\s*==\s*.*:.?$"
-    regex = re.compile(pattern, re.MULTILINE)
-
+    
     # Remove the matching line from the code
-    new_code = regex.sub("", code)
+    new_code = eliminate_re(fr"^\s*triplets = \[.*$", code)
+    new_code = eliminate_re(fr"^\s*python\s*$", new_code)
+    new_code = eliminate_re(pattern, new_code)
+    
 
     return new_code
 
